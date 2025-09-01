@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="600" height="300" viewBox="0 0 600 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff6b35;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#b24a25;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="600" height="300" fill="url(#bgGradient)"/>
+  
+  <!-- Grid pattern for modern look -->
+  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+  </pattern>
+  <rect width="600" height="300" fill="url(#grid)"/>
+  
+  <!-- BMW logo -->
+  <circle cx="50" cy="50" r="25" fill="#fff" stroke="none"/>
+  <circle cx="50" cy="50" r="20" fill="#0066cc"/>
+  <text x="50" y="57" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-weight="bold" font-size="12">BMW</text>
+  
+  <!-- Series title -->
+  <text x="50" y="220" fill="white" font-family="Arial, sans-serif" font-weight="bold" font-size="28">Convertibles</text>
+  <text x="50" y="250" fill="rgba(255,255,255,0.9)" font-family="Arial, sans-serif" font-size="16">The Ultimate Driving Machine</text>
+  
+  <!-- Decorative elements -->
+  <polygon points="500,50 550,25 550,75" fill="rgba(255,255,255,0.2)"/>
+  <polygon points="450,100 500,75 500,125" fill="rgba(255,255,255,0.1)"/>
+</svg>

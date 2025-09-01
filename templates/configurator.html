@@ -1,0 +1,823 @@
+{% extends "base.html" %}
+
+{% block title %}Configure Your {{ model.name }} - BMW Configurator{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Configuration Panel -->
+        <div class="col-lg-4 configuration-panel">
+            <div class="sticky-top p-3">
+                <h3>{{ model.name }} Configuration</h3>
+                <div class="price-display mb-3">
+                    <h4 id="totalPrice">${{ "%.2f"|format(model.base_price) }}</h4>
+                    <small class="text-muted">Total MSRP</small>
+                </div>
+
+                <!-- AI Assistance -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <i class="fas fa-robot"></i> AI Assistant
+                    </div>
+                    <div class="card-body">
+                        <textarea id="userPreferences" class="form-control mb-2" 
+                                placeholder="Tell me about your preferences: budget, usage, style, family needs..."></textarea>
+                        <button class="btn btn-ai-suggestion btn-sm w-100" onclick="getAISuggestion()">
+                            <i class="fas fa-magic"></i> Get AI Suggestion
+                        </button>
+                        <small class="text-muted mt-1 d-block">
+                            <i class="fas fa-info-circle"></i> 
+                            Our AI analyzes your preferences and suggests the best configuration for this {{ model.name }}
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Configuration Options -->
+                <div class="accordion" id="configAccordion">
+                                                    <!-- Engine Options -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" 
+                                    data-bs-target="#engineCollapse">
+                                Engine Options
+                            </button>
+                        </h2>
+                        <div id="engineCollapse" class="accordion-collapse collapse show">
+                            <div class="accordion-body">
+                                {% if options.engines %}
+                                    {% for engine in options.engines %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="engine" 
+                                               value="{{ engine.code }}" data-price="{{ engine.price }}">
+                                        <label class="form-check-label">
+                                            {{ engine.name }}<br>
+                                            <small class="text-muted">{{ engine.power }} | +${{ engine.price }}</small>
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                {% elif model.engine_options %}
+                                    {% for engine in model.engine_options %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="engine" 
+                                               value="{{ engine.name }}" data-price="{{ engine.price }}">
+                                        <label class="form-check-label">
+                                            {{ engine.name }}<br>
+                                            <small class="text-muted">{{ engine.power }} | +${{ engine.price }}</small>
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-muted">Engine options loading...</p>
+                                {% endif %}
+                                
+                                <!-- Drivetrain Options -->
+                                {% if options.drivetrains and options.drivetrains|length > 0 %}
+                                <h6 class="mt-3">Drivetrain</h6>
+                                {% for drivetrain in options.drivetrains %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="drivetrain" 
+                                           value="{{ drivetrain.code }}" data-price="{{ drivetrain.price }}">
+                                    <label class="form-check-label">
+                                        {{ drivetrain.name }}<br>
+                                        <small class="text-muted">+${{ drivetrain.price }}</small>
+                                    </label>
+                                </div>
+                                {% endfor %}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Exterior Options -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                    data-bs-target="#exteriorCollapse">
+                                Exterior
+                            </button>
+                        </h2>
+                        <div id="exteriorCollapse" class="accordion-collapse collapse">
+                            <div class="accordion-body">
+                                <h6>Paint Colors</h6>
+                                {% if options.exterior and options.exterior.colors %}
+                                    {% for color in options.exterior.colors %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="exterior_color" 
+                                               value="{{ color.code if color.code else color.name }}" data-price="{{ color.price }}">
+                                        <label class="form-check-label">
+                                            {{ color.name }}
+                                            {% if color.price > 0 %}+${{ color.price }}{% endif %}
+                                            {% if color.metallic %}<small class="text-muted"> (Metallic)</small>{% endif %}
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-muted">Color options loading...</p>
+                                {% endif %}
+
+                                <h6 class="mt-3">Wheels</h6>
+                                {% if options.exterior and options.exterior.wheels %}
+                                    {% for wheel in options.exterior.wheels %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="wheels" 
+                                               value="{{ wheel.code if wheel.code else wheel.name }}" data-price="{{ wheel.price }}">
+                                        <label class="form-check-label">
+                                            {{ wheel.name }}<br>
+                                            <small class="text-muted">{{ wheel.description }} | +${{ wheel.price }}</small>
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-muted">Wheel options loading...</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Interior Options -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                    data-bs-target="#interiorCollapse">
+                                Interior
+                            </button>
+                        </h2>
+                        <div id="interiorCollapse" class="accordion-collapse collapse">
+                            <div class="accordion-body">
+                                <h6>Upholstery</h6>
+                                {% if options.interior and options.interior.upholstery %}
+                                    {% for upholstery in options.interior.upholstery %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="upholstery" 
+                                               value="{{ upholstery.code if upholstery.code else upholstery.name }}" data-price="{{ upholstery.price }}">
+                                        <label class="form-check-label">
+                                            {{ upholstery.name }}
+                                            {% if upholstery.color %} - {{ upholstery.color }}{% endif %}
+                                            {% if upholstery.material %}<br><small class="text-muted">{{ upholstery.material }}</small>{% endif %}
+                                            {% if upholstery.price > 0 %}<br><small class="text-success">+${{ upholstery.price }}</small>{% endif %}
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-muted">Interior options loading...</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Packages -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                    data-bs-target="#packagesCollapse">
+                                Packages
+                            </button>
+                        </h2>
+                        <div id="packagesCollapse" class="accordion-collapse collapse">
+                            <div class="accordion-body">
+                                {% if options.packages.all_packages %}
+                                    {% for package in options.packages.all_packages %}
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" name="package" 
+                                               value="{{ package.code }}" data-price="{{ package.price }}"
+                                               data-conflicts="{{ package.conflicts_with | join(',') }}"
+                                               data-requires="{{ package.requires | join(',') }}">
+                                        <label class="form-check-label">
+                                            <strong>{{ package.name }}</strong> - ${{ package.price }}<br>
+                                            <small class="text-muted">{{ package.description }}</small><br>
+                                            <small class="text-muted">
+                                                {% for feature in package.features %}
+                                                • {{ feature }}<br>
+                                                {% endfor %}
+                                            </small>
+                                            {% if package.conflicts_with %}
+                                            <small class="text-warning">
+                                                <i class="fas fa-exclamation-triangle"></i> 
+                                                Conflicts with: {{ package.conflicts_with | join(', ') }}
+                                            </small><br>
+                                            {% endif %}
+                                            {% if package.requires %}
+                                            <small class="text-info">
+                                                <i class="fas fa-info-circle"></i> 
+                                                Requires: {{ package.requires | join(', ') }}
+                                            </small>
+                                            {% endif %}
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    {% for category, packages in options.packages.items() %}
+                                    <h6>{{ category.replace('_', ' ').title() }}</h6>
+                                    {% for package in packages %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="package" 
+                                               value="{{ package.name }}" data-price="{{ package.price }}">
+                                        <label class="form-check-label">
+                                            <strong>{{ package.name }}</strong> - ${{ package.price }}<br>
+                                            <small class="text-muted">
+                                                {% for feature in package.features %}
+                                                • {{ feature }}<br>
+                                                {% endfor %}
+                                            </small>
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Individual Options -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                    data-bs-target="#individualCollapse">
+                                Individual Options
+                            </button>
+                        </h2>
+                        <div id="individualCollapse" class="accordion-collapse collapse">
+                            <div class="accordion-body">
+                                {% if options.individual_options %}
+                                    {% for option in options.individual_options %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="individual_option" 
+                                               value="{{ option.code }}" data-price="{{ option.price }}">
+                                        <label class="form-check-label">
+                                            {{ option.name }} - ${{ option.price }}<br>
+                                            <small class="text-muted">{{ option.category.replace('_', ' ').title() }}</small>
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="mt-3">
+                    <button class="btn btn-success w-100 mb-2" onclick="saveConfiguration()">
+                        Save Configuration
+                    </button>
+                    <button class="btn btn-outline-primary w-100" onclick="validateConfiguration()">
+                        Validate Configuration
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview Panel -->
+        <div class="col-lg-8 preview-panel">
+            <div class="car-preview">
+                <img id="carImage" src="{{ model.images[0] }}" alt="{{ model.name }}" class="img-fluid">
+                
+                <!-- Car Details -->
+                <div class="car-details mt-4">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Performance</h5>
+                            <ul class="list-unstyled">
+                                <li><strong>Acceleration:</strong> {{ model.performance.acceleration }}</li>
+                                <li><strong>Top Speed:</strong> {{ model.performance.top_speed }}</li>
+                                <li><strong>Power:</strong> {{ model.performance.power }}</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Fuel Economy</h5>
+                            <ul class="list-unstyled">
+                                <li><strong>City:</strong> {{ model.fuel_economy.city }}</li>
+                                <li><strong>Highway:</strong> {{ model.fuel_economy.highway }}</li>
+                                <li><strong>Combined:</strong> {{ model.fuel_economy.combined }}</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Suggestions Display -->
+                <div id="aiSuggestions" class="card mt-4" style="display: none;">
+                    <div class="card-header">
+                        <i class="fas fa-lightbulb"></i> AI Recommendations
+                    </div>
+                    <div class="card-body" id="aiSuggestionsContent">
+                        <!-- AI suggestions will be displayed here -->
+                    </div>
+                </div>
+
+                <!-- Validation Results -->
+                <div id="validationResults" class="mt-4" style="display: none;">
+                    <!-- Validation results will be displayed here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentConfiguration = {};
+let basePrice = {{ model.base_price }};
+
+// Update price calculation
+function updatePrice() {
+    let totalPrice = basePrice;
+    
+    // Calculate selected options price
+    document.querySelectorAll('input:checked').forEach(input => {
+        const price = parseFloat(input.dataset.price) || 0;
+        totalPrice += price;
+    });
+    
+    document.getElementById('totalPrice').textContent = '$' + totalPrice.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+// Get AI suggestion
+function getAISuggestion() {
+    const preferences = document.getElementById('userPreferences').value;
+    if (!preferences.trim()) {
+        alert('Please enter your preferences first.');
+        return;
+    }
+    
+    // Show loading state
+    const button = event.target;
+    const originalText = button.textContent;
+    button.textContent = 'Getting AI Suggestion...';
+    button.disabled = true;
+    
+    // Collect current configuration
+    const configuration = {};
+    document.querySelectorAll('input:checked').forEach(input => {
+        if (input.type === 'radio') {
+            configuration[input.name] = input.value;
+        } else if (input.type === 'checkbox') {
+            if (!configuration[input.name]) {
+                configuration[input.name] = [];
+            }
+            configuration[input.name].push(input.value);
+        }
+    });
+    
+    fetch('/api/gemini/suggest', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            preferences: preferences,
+            model: '{{ model.name }}',
+            current_config: configuration
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            throw new Error(data.error);
+        }
+        
+        displayAISuggestion(data.suggestion, data.preference_analysis, data.model_data);
+        document.getElementById('aiSuggestions').style.display = 'block';
+    })
+    .catch(error => {
+        console.error('Error getting AI suggestion:', error);
+        
+        // Check if it's an API key configuration issue
+        if (error.message && error.message.includes('503')) {
+            document.getElementById('aiSuggestionsContent').innerHTML = `
+                <div class="alert alert-warning">
+                    <h6><i class="fas fa-exclamation-triangle"></i> AI Service Setup Required</h6>
+                    <p>To use AI suggestions, you need to configure your Google Gemini API key:</p>
+                    <ol>
+                        <li>Get your free API key from <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a></li>
+                        <li>Create a <code>.env</code> file in the project root</li>
+                        <li>Add: <code>GEMINI_API_KEY=your_api_key_here</code></li>
+                        <li>Restart the application</li>
+                    </ol>
+                </div>
+            `;
+        } else {
+            document.getElementById('aiSuggestionsContent').innerHTML = 
+                '<div class="alert alert-danger">Failed to get AI suggestion. Please try again.</div>';
+        }
+        
+        document.getElementById('aiSuggestions').style.display = 'block';
+    })
+    .finally(() => {
+        // Restore button state
+        button.textContent = originalText;
+        button.disabled = false;
+    });
+}
+
+// Display enhanced AI suggestion
+function displayAISuggestion(suggestion, preferenceAnalysis, modelData) {
+    // Store the suggestion data globally for the apply function
+    window.currentAISuggestion = suggestion;
+    
+    let content = '';
+    
+    if (suggestion.type === 'text_response') {
+        // Fallback for text response
+        content = `<div class="alert alert-info">
+            <h6><i class="fas fa-robot"></i> AI Recommendation</h6>
+            <pre style="white-space: pre-wrap;">${suggestion.recommendation}</pre>
+        </div>`;
+    } else {
+        // Enhanced structured response
+        content = `
+            <div class="ai-suggestion-enhanced">
+                <!-- Preference Analysis -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-user-check"></i> Your Preferences Analysis</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            ${Object.entries(preferenceAnalysis).map(([key, value]) => 
+                                value ? `<div class="col-md-4">
+                                    <span class="badge bg-primary">${key.replace('_', ' ')}</span>
+                                </div>` : ''
+                            ).join('')}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recommended Configuration -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-star"></i> Recommended Configuration</h6>
+                    </div>
+                    <div class="card-body">
+                        ${suggestion.recommended_config ? 
+                            Object.entries(suggestion.recommended_config).map(([key, value]) => `
+                                <div class="mb-2">
+                                    <strong>${key.replace('_', ' ').toUpperCase()}:</strong> 
+                                    ${Array.isArray(value) ? value.join(', ') : value}
+                                </div>
+                            `).join('') : 
+                            '<p>Configuration details not available in structured format.</p>'
+                        }
+                        
+                        ${suggestion.price_estimate ? `
+                            <div class="mt-3 p-3 bg-light rounded">
+                                <h6>Price Estimate</h6>
+                                <div>Base Price: $${suggestion.price_estimate.base_price.toLocaleString()}</div>
+                                <div>Estimated Options: $${suggestion.price_estimate.estimated_options.toLocaleString()}</div>
+                                <div><strong>Total: $${suggestion.price_estimate.estimated_total.toLocaleString()}</strong></div>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="mt-3">
+                            <button class="btn btn-success w-100" onclick="applyAIRecommendation()">
+                                <i class="fas fa-magic"></i> Apply This Configuration
+                            </button>
+                            <small class="text-muted d-block mt-1">
+                                <i class="fas fa-info-circle"></i> 
+                                This will update your selections on the left panel
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Reasoning -->
+                ${suggestion.reasoning ? `
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-lightbulb"></i> Why We Recommend This</h6>
+                        </div>
+                        <div class="card-body">
+                            ${Object.entries(suggestion.reasoning).map(([key, value]) => `
+                                <div class="mb-2">
+                                    <strong>${key.replace('_', ' ').toUpperCase()}:</strong> ${value}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <!-- Alternatives -->
+                ${suggestion.alternatives ? `
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-exchange-alt"></i> Alternative Options</h6>
+                        </div>
+                        <div class="card-body">
+                            ${Object.entries(suggestion.alternatives).map(([key, value]) => `
+                                <div class="mb-2">
+                                    <strong>${key.replace('_', ' ').toUpperCase()}:</strong> ${value}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <!-- Warnings -->
+                ${suggestion.warnings && suggestion.warnings.length > 0 ? `
+                    <div class="alert alert-warning">
+                        <h6><i class="fas fa-exclamation-triangle"></i> Important Considerations</h6>
+                        <ul class="mb-0">
+                            ${suggestion.warnings.map(warning => `<li>${warning}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+    
+    document.getElementById('aiSuggestionsContent').innerHTML = content;
+}
+
+// Apply AI recommendation to the form
+function applyAIRecommendation() {
+    // Get the current AI suggestion data
+    const suggestionData = window.currentAISuggestion;
+    
+    if (!suggestionData || !suggestionData.recommended_config) {
+        alert('No AI recommendation available to apply.');
+        return;
+    }
+    
+    // Clear all current selections
+    document.querySelectorAll('input[type="radio"], input[type="checkbox"]').forEach(input => {
+        input.checked = false;
+    });
+    
+    const config = suggestionData.recommended_config;
+    let appliedOptions = [];
+    let failedOptions = [];
+    
+    // Apply engine selection
+    if (config.engine) {
+        const engineInput = document.querySelector(`input[name="engine"][value="${config.engine}"]`);
+        if (engineInput) {
+            engineInput.checked = true;
+            appliedOptions.push(`Engine: ${config.engine}`);
+        } else {
+            failedOptions.push(`Engine: ${config.engine}`);
+        }
+    }
+    
+    // Apply drivetrain selection
+    if (config.drivetrain) {
+        const drivetrainInput = document.querySelector(`input[name="drivetrain"][value="${config.drivetrain}"]`);
+        if (drivetrainInput) {
+            drivetrainInput.checked = true;
+            appliedOptions.push(`Drivetrain: ${config.drivetrain}`);
+        } else {
+            failedOptions.push(`Drivetrain: ${config.drivetrain}`);
+        }
+    }
+    
+    // Apply exterior color
+    if (config.exterior_color) {
+        const colorInput = document.querySelector(`input[name="exterior_color"][value="${config.exterior_color}"]`);
+        if (colorInput) {
+            colorInput.checked = true;
+            appliedOptions.push(`Color: ${config.exterior_color}`);
+        } else {
+            failedOptions.push(`Color: ${config.exterior_color}`);
+        }
+    }
+    
+    // Apply interior selection
+    if (config.interior) {
+        const interiorInput = document.querySelector(`input[name="upholstery"][value="${config.interior}"]`);
+        if (interiorInput) {
+            interiorInput.checked = true;
+            appliedOptions.push(`Interior: ${config.interior}`);
+        } else {
+            failedOptions.push(`Interior: ${config.interior}`);
+        }
+    }
+    
+    // Apply packages
+    if (config.packages && Array.isArray(config.packages)) {
+        config.packages.forEach(packageCode => {
+            const packageInput = document.querySelector(`input[name="package"][value="${packageCode}"]`);
+            if (packageInput) {
+                packageInput.checked = true;
+                appliedOptions.push(`Package: ${packageCode}`);
+            } else {
+                failedOptions.push(`Package: ${packageCode}`);
+            }
+        });
+    }
+    
+    // Apply individual options
+    if (config.individual_options && Array.isArray(config.individual_options)) {
+        config.individual_options.forEach(optionCode => {
+            const optionInput = document.querySelector(`input[name="individual_option"][value="${optionCode}"]`);
+            if (optionInput) {
+                optionInput.checked = true;
+                appliedOptions.push(`Option: ${optionCode}`);
+            } else {
+                failedOptions.push(`Option: ${optionCode}`);
+            }
+        });
+    }
+    
+    // Update the price calculation
+    updatePrice();
+    
+    // Show feedback to user with a better notification
+    showApplyFeedback(appliedOptions, failedOptions);
+    
+    // Scroll to top to see the updated selections
+    document.querySelector('.configuration-panel').scrollTop = 0;
+    
+    // Add visual feedback
+    const configPanel = document.querySelector('.configuration-panel');
+    configPanel.style.backgroundColor = '#e8f5e8';
+    setTimeout(() => {
+        configPanel.style.backgroundColor = '';
+    }, 2000);
+}
+
+// Show feedback for applying AI recommendations
+function showApplyFeedback(appliedOptions, failedOptions) {
+    const feedbackContainer = document.createElement('div');
+    feedbackContainer.className = 'alert alert-dismissible fade show';
+    feedbackContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; max-width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
+    
+    let alertClass = 'alert-success';
+    let icon = 'fas fa-check-circle';
+    let title = '✅ AI Configuration Applied!';
+    
+    if (failedOptions.length > 0 && appliedOptions.length === 0) {
+        alertClass = 'alert-danger';
+        icon = 'fas fa-exclamation-circle';
+        title = '❌ Could Not Apply Configuration';
+    } else if (failedOptions.length > 0) {
+        alertClass = 'alert-warning';
+        icon = 'fas fa-exclamation-triangle';
+        title = '⚠️ Partially Applied Configuration';
+    }
+    
+    feedbackContainer.className += ` ${alertClass}`;
+    
+    let content = `
+        <div class="d-flex align-items-start">
+            <i class="${icon} me-2 mt-1"></i>
+            <div class="flex-grow-1">
+                <h6 class="mb-1">${title}</h6>
+    `;
+    
+    if (appliedOptions.length > 0) {
+        content += `
+            <div class="mb-2">
+                <strong>Applied:</strong>
+                <ul class="mb-0 small">
+                    ${appliedOptions.map(option => `<li>${option}</li>`).join('')}
+                </ul>
+            </div>
+        `;
+    }
+    
+    if (failedOptions.length > 0) {
+        content += `
+            <div class="mb-2">
+                <strong>Not found:</strong>
+                <ul class="mb-0 small">
+                    ${failedOptions.map(option => `<li>${option}</li>`).join('')}
+                </ul>
+                <small class="text-muted">These options may not be available for this model.</small>
+            </div>
+        `;
+    }
+    
+    content += `
+            </div>
+            <button type="button" class="btn-close" onclick="this.parentElement.parentElement.remove()"></button>
+        </div>
+    `;
+    
+    feedbackContainer.innerHTML = content;
+    document.body.appendChild(feedbackContainer);
+    
+    // Auto remove after 8 seconds
+    setTimeout(() => {
+        if (feedbackContainer.parentNode) {
+            feedbackContainer.remove();
+        }
+    }, 8000);
+}
+
+// Validate configuration
+function validateConfiguration() {
+    const configuration = {};
+    document.querySelectorAll('input:checked').forEach(input => {
+        configuration[input.name] = input.value;
+    });
+    
+    fetch('/api/validate-configuration', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            configuration: configuration,
+            model: '{{ model.name }}'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        displayValidationResults(data);
+    })
+    .catch(error => {
+        console.error('Error validating configuration:', error);
+    });
+}
+
+// Display validation results
+function displayValidationResults(results) {
+    const container = document.getElementById('validationResults');
+    let html = '<div class="card">';
+    
+    if (results.valid) {
+        html += '<div class="card-header bg-success text-white">✓ Configuration Valid</div>';
+    } else {
+        html += '<div class="card-header bg-danger text-white">⚠ Configuration Issues</div>';
+    }
+    
+    html += '<div class="card-body">';
+    
+    if (results.errors && results.errors.length > 0) {
+        html += '<h6>Errors:</h6><ul class="text-danger">';
+        results.errors.forEach(error => {
+            html += `<li>${error.message}</li>`;
+        });
+        html += '</ul>';
+    }
+    
+    if (results.warnings && results.warnings.length > 0) {
+        html += '<h6>Warnings:</h6><ul class="text-warning">';
+        results.warnings.forEach(warning => {
+            html += `<li>${warning.message}</li>`;
+        });
+        html += '</ul>';
+    }
+    
+    if (results.suggestions && results.suggestions.length > 0) {
+        html += '<h6>Suggestions:</h6><ul class="text-info">';
+        results.suggestions.forEach(suggestion => {
+            html += `<li>${suggestion.message}</li>`;
+        });
+        html += '</ul>';
+    }
+    
+    html += '</div></div>';
+    container.innerHTML = html;
+    container.style.display = 'block';
+}
+
+// Save configuration
+function saveConfiguration() {
+    const configuration = {};
+    document.querySelectorAll('input:checked').forEach(input => {
+        configuration[input.name] = input.value;
+    });
+    
+    const name = prompt('Enter a name for this configuration:');
+    if (!name) return;
+    
+    fetch('/api/save-configuration', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            configuration: configuration,
+            name: name,
+            model: '{{ model.name }}'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Configuration saved successfully!');
+        } else {
+            alert('Failed to save configuration.');
+        }
+    })
+    .catch(error => {
+        console.error('Error saving configuration:', error);
+        alert('Failed to save configuration.');
+    });
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Add event listeners to all inputs
+    document.querySelectorAll('input[type="radio"], input[type="checkbox"]').forEach(input => {
+        input.addEventListener('change', updatePrice);
+    });
+    
+    // Initial price calculation
+    updatePrice();
+});
+</script>
+{% endblock %}

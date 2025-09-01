@@ -1,0 +1,270 @@
+/* BMW Configurator Styles */
+
+:root {
+    --bmw-blue: #0066cc;
+    --bmw-dark-blue: #003d82;
+    --bmw-light-blue: #e6f2ff;
+    --bmw-gray: #f5f5f5;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: var(--bmw-gray);
+}
+
+.hero-section {
+    background: linear-gradient(135deg, var(--bmw-dark-blue), var(--bmw-blue));
+    color: white;
+    padding: 100px 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('/static/images/bmw-hero-bg.jpg') center/cover;
+    opacity: 0.3;
+    z-index: -1;
+}
+
+.series-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.series-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.series-card .card-img-top {
+    height: 200px;
+    object-fit: cover;
+}
+
+.model-card {
+    transition: transform 0.2s ease;
+    border: 1px solid #e0e0e0;
+}
+
+.model-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.configuration-panel {
+    background: white;
+    border-right: 1px solid #e0e0e0;
+    min-height: 100vh;
+}
+
+.price-display {
+    background: var(--bmw-light-blue);
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.price-display h4 {
+    color: var(--bmw-dark-blue);
+    margin: 0;
+    font-weight: bold;
+}
+
+.preview-panel {
+    padding: 20px;
+}
+
+.car-preview {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.car-preview img {
+    border-radius: 8px;
+    width: 100%;
+    max-height: 400px;
+    object-fit: cover;
+}
+
+.accordion-button {
+    background-color: var(--bmw-light-blue);
+    color: var(--bmw-dark-blue);
+    font-weight: 600;
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: var(--bmw-blue);
+    color: white;
+}
+
+.form-check-input:checked {
+    background-color: var(--bmw-blue);
+    border-color: var(--bmw-blue);
+}
+
+.btn-primary {
+    background-color: var(--bmw-blue);
+    border-color: var(--bmw-blue);
+}
+
+.btn-primary:hover {
+    background-color: var(--bmw-dark-blue);
+    border-color: var(--bmw-dark-blue);
+}
+
+.car-details {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.models-list .badge {
+    margin: 2px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .configuration-panel {
+        min-height: auto;
+        border-right: none;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .hero-section {
+        padding: 60px 0;
+    }
+    
+    .hero-section h1 {
+        font-size: 2.5rem;
+    }
+}
+
+/* Loading Animation */
+.loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(0, 102, 204, 0.3);
+    border-radius: 50%;
+    border-top-color: var(--bmw-blue);
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Custom Alerts */
+.alert-info {
+    background-color: var(--bmw-light-blue);
+    border-color: var(--bmw-blue);
+    color: var(--bmw-dark-blue);
+}
+
+/* Price Breakdown Styling */
+.price-breakdown {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 15px;
+}
+
+.price-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.price-item:last-child {
+    border-bottom: none;
+    font-weight: bold;
+    font-size: 1.1em;
+    color: var(--bmw-dark-blue);
+}
+
+/* AI Suggestions Styling */
+#aiSuggestions pre {
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 15px;
+    white-space: pre-wrap;
+    font-family: inherit;
+    font-size: 14px;
+}
+
+.ai-suggestion-enhanced {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+.ai-suggestion-enhanced .card {
+    border: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 15px;
+}
+
+.ai-suggestion-enhanced .card-header {
+    background: linear-gradient(45deg, var(--bmw-blue), var(--bmw-dark-blue));
+    color: white;
+    border-bottom: none;
+}
+
+.ai-suggestion-enhanced .badge {
+    margin: 2px;
+    padding: 6px 12px;
+    font-size: 0.75em;
+}
+
+.preference-badge-active {
+    background-color: var(--bmw-blue) !important;
+}
+
+.price-estimate {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-left: 4px solid var(--bmw-blue);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Enhanced button styling for AI features */
+.btn-ai-suggestion {
+    background: linear-gradient(45deg, var(--bmw-blue), #0056b3);
+    border: none;
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.btn-ai-suggestion:hover {
+    background: linear-gradient(45deg, var(--bmw-dark-blue), var(--bmw-blue));
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 102, 204, 0.3);
+}
+
+/* Validation Results Styling */
+.validation-error {
+    border-left: 4px solid #dc3545;
+    padding-left: 15px;
+}
+
+.validation-warning {
+    border-left: 4px solid #ffc107;
+    padding-left: 15px;
+}
+
+.validation-success {
+    border-left: 4px solid #28a745;
+    padding-left: 15px;
+}

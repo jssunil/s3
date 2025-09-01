@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="200" viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="carGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#00a86b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00754a;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="windowGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#87CEEB;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#4682B4;stop-opacity:0.8" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="400" height="200" fill="#f8f9fa"/>
+  
+  <!-- Ground line -->
+  <line x1="0" y1="180" x2="400" y2="180" stroke="#ddd" stroke-width="2"/>
+  
+  <!-- Car body -->
+  <path d="M50,125 Q50,105 70,105 L330,105 Q350,105 350,125 L350,140 Q350,155 330,155 L320,155 Q320,175 300,175 Q280,175 280,155 L120,155 Q120,175 100,175 Q80,175 80,155 L70,155 Q50,155 50,140 Z" fill="url(#carGradient)" stroke="#00754a" stroke-width="2"/>
+  
+  <!-- Windows -->
+  <path d="M80,105 Q80,85 100,85 L150,85 Q170,85 170,105 M230,85 Q250,85 250,105 L300,105 Q320,85 320,105" fill="url(#windowGradient)" stroke="#333" stroke-width="1"/>
+  
+  <!-- Wheels -->
+  <circle cx='100' cy='155' r='14' fill="#2c3e50" stroke="#1a252f" stroke-width="2"/>
+  <circle cx='300' cy='155' r='14' fill="#2c3e50" stroke="#1a252f" stroke-width="2"/>
+  
+  <!-- BMW kidney grille -->
+  <ellipse cx="350" cy="127" rx="5" ry="8" fill="#333"/>
+  <ellipse cx="350" cy="140" rx="5" ry="8" fill="#333"/>
+  
+  <!-- Headlights -->
+  <ellipse cx="345" cy="120" rx="8" ry="4" fill="#fff" stroke="#ddd"/>
+  <ellipse cx="345" cy="147" rx="8" ry="4" fill="#fff" stroke="#ddd"/>
+  
+  <!-- BMW logo area -->
+  <circle cx="375" cy="133" r="12" fill="#0066cc" stroke="#fff" stroke-width="2"/>
+  <text x="375" y="138" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-weight="bold" font-size="8">BMW</text>
+  
+  <!-- Model name -->
+  <text x="200" y="170" text-anchor="middle" fill="#333" font-family="Arial, sans-serif" font-weight="bold" font-size="16">i7</text>
+  
+  <!-- Car type -->
+  <text x="200" y="190" text-anchor="middle" fill="#666" font-family="Arial, sans-serif" font-size="12">Electric</text>
+</svg>

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Error - BMW Car Configurator{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-exclamation-triangle"></i> 
+                        Error
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-tools fa-5x text-muted mb-3"></i>
+                        <h5 class="text-danger">Something went wrong</h5>
+                    </div>
+                    
+                    <div class="alert alert-danger" role="alert">
+                        <strong>Error Details:</strong><br>
+                        {{ error if error else "An unexpected error occurred while processing your request." }}
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h6>What you can do:</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-arrow-right text-primary"></i> Try refreshing the page</li>
+                            <li><i class="fas fa-arrow-right text-primary"></i> Go back to the <a href="{{ url_for('index') }}">home page</a></li>
+                            <li><i class="fas fa-arrow-right text-primary"></i> Clear your browser cache and cookies</li>
+                            <li><i class="fas fa-arrow-right text-primary"></i> Contact support if the problem persists</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <a href="{{ url_for('index') }}" class="btn btn-primary">
+                            <i class="fas fa-home"></i> Return to Home
+                        </a>
+                        <button onclick="history.back()" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Go Back
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Technical Details (for development) -->
+            {% if config.DEBUG %}
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">Technical Details (Debug Mode)</h6>
+                </div>
+                <div class="card-body">
+                    <small class="text-muted">
+                        <strong>Error:</strong> {{ error }}<br>
+                        <strong>Time:</strong> {{ moment().format('YYYY-MM-DD HH:mm:ss') }}<br>
+                        <strong>URL:</strong> {{ request.url }}
+                    </small>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-redirect to home after 30 seconds
+setTimeout(function() {
+    if (confirm('Would you like to return to the home page?')) {
+        window.location.href = "{{ url_for('index') }}";
+    }
+}, 30000);
+</script>
+{% endblock %}

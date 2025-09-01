@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+
+{% block title %}Saved Configurations - BMW Car Configurator{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-bookmark"></i> 
+                    Saved Configurations
+                </h2>
+                <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-plus"></i> Create New Configuration
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    {% if configurations and configurations|length > 0 %}
+    <div class="row">
+        {% for config in configurations %}
+        <div class="col-lg-6 col-xl-4 mb-4">
+            <div class="card h-100 configuration-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">{{ config.name }}</h6>
+                    <small class="text-muted">{{ config.model }}</small>
+                </div>
+                <div class="card-body">
+                    <div class="configuration-preview mb-3">
+                        <!-- Model image -->
+                        <img src="/static/images/{{ config.model.lower().replace(' ', '-') }}-front.jpg" 
+                             alt="{{ config.model }}" 
+                             class="img-fluid rounded mb-2"
+                             style="height: 120px; width: 100%; object-fit: cover;">
+                    </div>
+                    
+                    <div class="configuration-details">
+                        <h6>Configuration Summary:</h6>
+                        <div class="row">
+                            {% if config.configuration %}
+                                {% for key, value in config.configuration.items() %}
+                                    {% if value and key != 'model' %}
+                                    <div class="col-12">
+                                        <small class="text-muted">
+                                            <strong>{{ key.replace('_', ' ').title() }}:</strong> 
+                                            {% if value is boolean %}
+                                                {{ 'Yes' if value else 'No' }}
+                                            {% else %}
+                                                {{ value.replace('_', ' ').title() if value is string else value }}
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <div class="col-12">
+                                    <small class="text-muted">No configuration details available</small>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="configuration-meta mt-3">
+                        <small class="text-muted">
+                            <i class="fas fa-clock"></i> 
+                            Saved: {{ config.timestamp[:19] if config.timestamp else 'Unknown' }}
+                        </small>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="btn-group w-100" role="group">
+                        <button class="btn btn-outline-primary btn-sm" 
+                                onclick="loadConfiguration('{{ loop.index0 }}')">
+                            <i class="fas fa-download"></i> Load
+                        </button>
+                        <button class="btn btn-outline-info btn-sm" 
+                                onclick="duplicateConfiguration('{{ loop.index0 }}')">
+                            <i class="fas fa-copy"></i> Duplicate
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" 
+                                onclick="deleteConfiguration('{{ loop.index0 }}')">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Configuration Statistics -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Configuration Statistics</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-primary">{{ configurations|length }}</h4>
+                                <small class="text-muted">Total Configurations</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                {% set unique_models = configurations | map(attribute='model') | list | unique | list %}
+                                <h4 class="text-info">{{ unique_models|length if unique_models else 0 }}</h4>
+                                <small class="text-muted">Different Models</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                {% set recent_configs = configurations | selectattr('timestamp') | list %}
+                                <h4 class="text-success">{{ recent_configs|length }}</h4>
+                                <small class="text-muted">Recent Configs</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-warning">
+                                    <i class="fas fa-star"></i>
+                                </h4>
+                                <small class="text-muted">Favorites</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% else %}
+    <!-- No configurations state -->
+    <div class="row">
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="fas fa-bookmark fa-5x text-muted mb-4"></i>
+                <h4 class="text-muted">No Saved Configurations</h4>
+                <p class="lead text-muted mb-4">
+                    You haven't saved any car configurations yet. 
+                    Start building your dream BMW to save your favorite configurations.
+                </p>
+                <a href="{{ url_for('index') }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-car"></i> Start Configuring
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Load Configuration Modal -->
+<div class="modal fade" id="loadConfigModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Load Configuration</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to load this configuration? This will open the configurator with the saved settings.</p>
+                <div id="loadConfigDetails"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmLoad">Load Configuration</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Configuration Modal -->
+<div class="modal fade" id="deleteConfigModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Configuration</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this configuration? This action cannot be undone.</p>
+                <div id="deleteConfigDetails"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDelete">Delete Configuration</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let configToLoad = null;
+let configToDelete = null;
+
+function loadConfiguration(index) {
+    configToLoad = index;
+    const configurations = {{ configurations | tojson }};
+    const config = configurations[index];
+    
+    document.getElementById('loadConfigDetails').innerHTML = `
+        <strong>Name:</strong> ${config.name}<br>
+        <strong>Model:</strong> ${config.model}<br>
+        <strong>Saved:</strong> ${config.timestamp ? config.timestamp.substring(0, 19) : 'Unknown'}
+    `;
+    
+    new bootstrap.Modal(document.getElementById('loadConfigModal')).show();
+}
+
+function duplicateConfiguration(index) {
+    const configurations = {{ configurations | tojson }};
+    const config = configurations[index];
+    
+    // Create a copy with new name
+    const newName = prompt('Enter name for duplicated configuration:', config.name + ' (Copy)');
+    if (newName) {
+        fetch('/api/save-configuration', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                configuration: config.configuration,
+                name: newName
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Failed to duplicate configuration');
+            }
+        })
+        .catch(error => {
+            console.error('Error duplicating configuration:', error);
+            alert('Failed to duplicate configuration');
+        });
+    }
+}
+
+function deleteConfiguration(index) {
+    configToDelete = index;
+    const configurations = {{ configurations | tojson }};
+    const config = configurations[index];
+    
+    document.getElementById('deleteConfigDetails').innerHTML = `
+        <strong>Name:</strong> ${config.name}<br>
+        <strong>Model:</strong> ${config.model}
+    `;
+    
+    new bootstrap.Modal(document.getElementById('deleteConfigModal')).show();
+}
+
+document.getElementById('confirmLoad').addEventListener('click', function() {
+    if (configToLoad !== null) {
+        const configurations = {{ configurations | tojson }};
+        const config = configurations[configToLoad];
+        
+        // Redirect to configurator with model
+        window.location.href = `/configurator/${encodeURIComponent(config.model)}?load=${configToLoad}`;
+    }
+});
+
+document.getElementById('confirmDelete').addEventListener('click', function() {
+    if (configToDelete !== null) {
+        fetch('/api/delete-configuration', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                index: configToDelete
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Failed to delete configuration');
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting configuration:', error);
+            alert('Failed to delete configuration');
+        });
+    }
+});
+
+// Add some styling for configuration cards
+document.addEventListener('DOMContentLoaded', function() {
+    const configCards = document.querySelectorAll('.configuration-card');
+    configCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-5px)';
+            this.style.transition = 'transform 0.3s ease';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+});
+</script>
+{% endblock %}
