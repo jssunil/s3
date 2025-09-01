@@ -128,7 +128,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Configure Gemini AI
-gemini_api_key = os.environ.get('GEMINI_API_KEY')
+#gemini_api_key = os.environ.get('GEMINI_API_KEY')
+gemini_api_key = "AIzaSyAMsbioRUDgu_G_CZYOqWoE_B8jbZOkgSY"
 if not gemini_api_key:
     logger.warning("GEMINI_API_KEY not found in environment variables. AI suggestions will not work.")
     logger.warning("Please add your Gemini API key to a .env file or environment variables.")
@@ -136,8 +137,9 @@ if not gemini_api_key:
 else:
     try:
         genai.configure(api_key=gemini_api_key)
-        gemini_model = genai.GenerativeModel('gemini-2.0-flash')
-        logger.info("Google Gemini Flash 2.0 model initialized successfully")
+        # Use the more stable gemini-1.5-flash model
+        gemini_model = genai.GenerativeModel('gemini-1.5-flash')
+        logger.info("Google Gemini Flash 1.5 model initialized successfully")
     except Exception as e:
         logger.error(f"Failed to initialize Gemini model: {e}")
         gemini_model = None
@@ -239,112 +241,246 @@ def gemini_suggest():
                     'step3': 'Restart the application'
                 }
             }), 503
+        
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+            
         user_preferences = data.get('preferences', '')
         model_name = data.get('model', '')
         current_config = data.get('current_config', {})
         
-        # Get comprehensive model data
-        model_data = bmw_scraper.get_model_details(model_name)
-        available_options = bmw_scraper.get_options_for_model(model_name)
+        if not user_preferences or not model_name:
+            return jsonify({'error': 'Missing preferences or model name'}), 400
+        
+        logger.info(f"Processing AI suggestion for {model_name} with preferences: {user_preferences[:100]}...")
+        
+        # Get model data with error handling
+        try:
+            model_data = bmw_scraper.get_model_details(model_name)
+            available_options = bmw_scraper.get_options_for_model(model_name)
+        except Exception as e:
+            logger.error(f"Error fetching model data: {e}")
+            return jsonify({'error': 'Failed to fetch model data'}), 500
+        
+        # Analyze user preferences
+        preference_analysis = analyze_user_preferences(user_preferences)
+        
+        # Get comprehensive model data and constraints
+        base_price = model_data.get('base_price', 50000)
         constraints = available_options.get('constraints', {})
         
-        # Analyze user preferences for key themes
-        preference_analysis = analyze_user_preferences(user_preferences)
+        # Extract all available options with full details and handle both dict and list formats
+        # Use actual names as keys since that's what the template expects
+        engines = available_options.get('engines', {})
+        if isinstance(engines, list):
+            engines = {item.get('code', item.get('name', f'ENGINE_{i}')): item for i, item in enumerate(engines)}
+        
+        drivetrains = available_options.get('drivetrains', {})
+        if isinstance(drivetrains, list):
+            drivetrains = {item.get('code', item.get('name', f'DRIVETRAIN_{i}')): item for i, item in enumerate(drivetrains)}
+        
+        exterior_colors = available_options.get('exterior', {}).get('colors', {})
+        if isinstance(exterior_colors, list):
+            exterior_colors = {item.get('code', item.get('name', f'COLOR_{i}')): item for i, item in enumerate(exterior_colors)}
+        
+        interior_options = available_options.get('interior', {}).get('upholstery', {})
+        if isinstance(interior_options, list):
+            interior_options = {item.get('code', item.get('name', f'INTERIOR_{i}')): item for i, item in enumerate(interior_options)}
+        
+        packages = available_options.get('packages', {}).get('all_packages', {})
+        if isinstance(packages, list):
+            packages = {item.get('code', item.get('name', f'PACKAGE_{i}')): item for i, item in enumerate(packages)}
+        
+        individual_options = available_options.get('individual_options', {})
+        if isinstance(individual_options, list):
+            individual_options = {item.get('code', item.get('name', f'OPTION_{i}')): item for i, item in enumerate(individual_options)}
+        
+        # Format constraints for AI
+        constraints_text = format_constraints_for_ai(constraints)
         
         # Get model-specific recommendations
         model_recommendations = get_model_specific_recommendations(model_name, model_data)
         
-        # Create comprehensive prompt for Gemini
-        prompt = f"""
-        You are a BMW expert consultant helping a customer configure their {model_name}. 
+        # Create comprehensive prompt with all model data and constraints
+        prompt = f"""You are a BMW expert consultant helping a customer configure their {model_name}.
 
-        MODEL DETAILS:
-        - Base Price: ${model_data.get('base_price', 'N/A'):,}
-        - Category: {model_data.get('category', 'N/A')}
-        - Body Style: {model_data.get('body_style', 'N/A')}
-        - Performance: {model_data.get('performance', {})}
-        - Fuel Economy: {model_data.get('fuel_economy', {})}
+CUSTOMER PREFERENCES: "{user_preferences}"
 
-        CUSTOMER PREFERENCES: "{user_preferences}"
+MODEL INFORMATION:
+- Model: {model_name}
+- Base Price: ${base_price:,}
+- Category: {model_data.get('category', 'N/A')}
+- Body Style: {model_data.get('body_style', 'N/A')}
+- Performance: {model_data.get('performance', {})}
+- Fuel Economy: {model_data.get('fuel_economy', {})}
 
-        PREFERENCE ANALYSIS:
-        - Budget Focus: {preference_analysis['budget_conscious']}
-        - Performance Focus: {preference_analysis['performance_oriented']}
-        - Luxury Focus: {preference_analysis['luxury_oriented']}
-        - Technology Focus: {preference_analysis['tech_savvy']}
-        - Family Focus: {preference_analysis['family_oriented']}
-        - Eco Focus: {preference_analysis['eco_conscious']}
+PREFERENCE ANALYSIS:
+- Budget Focus: {preference_analysis['budget_conscious']}
+- Performance Focus: {preference_analysis['performance_oriented']}
+- Luxury Focus: {preference_analysis['luxury_oriented']}
+- Technology Focus: {preference_analysis['tech_savvy']}
+- Family Focus: {preference_analysis['family_oriented']}
+- Eco Focus: {preference_analysis['eco_conscious']}
 
-        AVAILABLE OPTIONS:
-        Engines: {[f"{eng['code']}: {eng['name']} (+${eng['price']})" for eng in available_options.get('engines', [])]}
-        Drivetrains: {[f"{dt['code']}: {dt['name']} (+${dt['price']})" for dt in available_options.get('drivetrains', [])]}
-        Exterior Colors: {[f"{color['code']}: {color['name']} (+${color['price']})" for color in available_options.get('exterior', {}).get('colors', [])]}
-        Interior Options: {[f"{interior['code']}: {interior['name']} (+${interior['price']})" for interior in available_options.get('interior', {}).get('upholstery', [])]}
-        Packages: {[f"{pkg['code']}: {pkg['name']} - ${pkg['price']}" for pkg in available_options.get('packages', {}).get('all_packages', [])]}
-        Individual Options: {[f"{opt['code']}: {opt['name']} - ${opt['price']}" for opt in available_options.get('individual_options', [])]}
+AVAILABLE OPTIONS WITH PRICING:
 
-        CURRENT SELECTION: {current_config}
+ENGINES:
+{chr(10).join([f'- "{code}": {details.get("name", "Unknown")} (+${details.get("price", 0):,}) - {details.get("power", "N/A")}' for code, details in engines.items()]) if engines else "- No engine options available"}
 
-        CONSTRAINTS TO CONSIDER:
-        {format_constraints_for_ai(constraints)}
+DRIVETRAINS:
+{chr(10).join([f'- "{code}": {details.get("name", "Unknown")} (+${details.get("price", 0):,})' for code, details in drivetrains.items()]) if drivetrains else "- No drivetrain options available"}
 
-        MODEL-SPECIFIC RECOMMENDATIONS:
-        {model_recommendations}
+EXTERIOR COLORS:
+{chr(10).join([f'- "{code}": {details.get("name", "Unknown")} (+${details.get("price", 0):,})' for code, details in exterior_colors.items()]) if exterior_colors else "- No color options available"}
 
-        Please provide a detailed configuration recommendation in the following JSON format:
-        {{
-            "recommended_config": {{
-                "engine": "engine_code_from_available_options",
-                "drivetrain": "drivetrain_code_from_available_options", 
-                "exterior_color": "color_code_from_available_options",
-                "interior": "interior_code_from_available_options",
-                "packages": ["package_code1", "package_code2"],
-                "individual_options": ["option_code1", "option_code2"]
-            }},
-            "reasoning": {{
-                "engine": "Why this engine matches their needs",
-                "drivetrain": "Why this drivetrain is recommended",
-                "color": "Color recommendation reasoning",
-                "packages": "Package recommendations and why",
-                "overall": "Overall configuration summary"
-            }},
-            "price_estimate": {{
-                "base_price": {model_data.get('base_price', 50000)},
-                "estimated_options": 0,
-                "estimated_total": 0
-            }},
-            "alternatives": {{
-                "budget_option": "Suggestion for lower budget",
-                "performance_option": "Suggestion for performance focus",
-                "luxury_option": "Suggestion for luxury focus"
-            }},
-            "warnings": [
-                "Any important considerations or trade-offs"
-            ]
-        }}
+INTERIOR OPTIONS:
+{chr(10).join([f'- "{code}": {details.get("name", "Unknown")} (+${details.get("price", 0):,})' for code, details in interior_options.items()]) if interior_options else "- No interior options available"}
 
-        Focus on:
-        1. Use EXACT CODES from the available options above (e.g., "B58_3_0T" for engine, "xDrive" for drivetrain)
-        2. Match customer preferences with appropriate options
-        3. Avoid conflicting options based on constraints
-        4. Provide value-conscious recommendations
-        5. Explain the reasoning behind each choice
-        6. Offer alternatives for different priorities
+PACKAGES:
+{chr(10).join([f'- "{code}": {details.get("name", "Unknown")} - ${details.get("price", 0):,}' for code, details in packages.items()]) if packages else "- No packages available"}
+
+INDIVIDUAL OPTIONS:
+{chr(10).join([f'- "{code}": {details.get("name", "Unknown")} - ${details.get("price", 0):,}' for code, details in individual_options.items()]) if individual_options else "- No individual options available"}
+
+CONSTRAINTS AND DEPENDENCIES:
+{constraints_text}
+
+MODEL-SPECIFIC RECOMMENDATIONS:
+{model_recommendations}
+
+CURRENT CONFIGURATION: {current_config}
+
+Based on the customer preferences, model characteristics, available options, and constraints, please provide a detailed configuration recommendation.
+
+Respond with ONLY a JSON object in this exact format:
+{{
+    "recommended_config": {{
+        "engine": "exact_engine_name_from_above_in_quotes",
+        "drivetrain": "exact_drivetrain_name_from_above_in_quotes",
+        "exterior_color": "exact_color_name_from_above_in_quotes",
+        "interior": "exact_interior_name_from_above_in_quotes",
+        "packages": ["package_name1", "package_name2"],
+        "individual_options": ["option_name1", "option_name2"]
+    }},
+    "reasoning": {{
+        "engine": "Why this engine matches customer needs and preferences",
+        "drivetrain": "Why this drivetrain is recommended based on preferences",
+        "color": "Color recommendation reasoning based on preferences",
+        "interior": "Interior choice reasoning",
+        "packages": "Package recommendations and value explanation",
+        "overall": "Overall configuration summary and benefits"
+    }},
+    "price_estimate": {{
+        "base_price": {base_price},
+        "engine_cost": 0,
+        "drivetrain_cost": 0,
+        "color_cost": 0,
+        "interior_cost": 0,
+        "packages_cost": 0,
+        "options_cost": 0,
+        "estimated_total": {base_price}
+    }},
+    "alternatives": {{
+        "budget_option": "Lower cost alternative configuration",
+        "performance_option": "Performance-focused alternative",
+        "luxury_option": "Luxury-focused alternative"
+    }},
+    "warnings": [
+        "Important considerations or trade-offs to be aware of"
+    ]
+}}
+
+CRITICAL REQUIREMENTS:
+1. Use ONLY the EXACT option names (in quotes) listed above - do not modify or abbreviate them
+2. For interior, use exact names like "Vernasca Leather", "Dakota Leather", "Sensatec Synthetic Leather"
+3. For individual options, use exact names like "Sunroof", "Heated Steering Wheel", "Harman Kardon Surround Sound"
+4. Copy the option names EXACTLY as shown in quotes above
+5. Do not create codes or abbreviations - use the full option names
+6. Response must be valid JSON only
+7. If an option is not available, use null instead of making up names"""
         
-        IMPORTANT: Use only the option codes listed above. Do not make up codes.
-        """
-        
-        response = gemini_model.generate_content(prompt)
-        
-        # Try to parse the JSON response
+        # Generate content with timeout and error handling
         try:
-            suggestion_data = json.loads(response.text.strip().replace('```json', '').replace('```', ''))
-        except json.JSONDecodeError:
-            # Fallback to text response if JSON parsing fails
+            logger.info("Calling Gemini API...")
+            response = gemini_model.generate_content(
+                prompt,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=0.7,
+                    max_output_tokens=1000,
+                )
+            )
+            
+            if not response or not response.text:
+                raise Exception("Empty response from Gemini")
+                
+            logger.info(f"Gemini response received: {response.text[:200]}...")
+            
+        except Exception as e:
+            logger.error(f"Gemini API call failed: {e}")
+            # Provide a fallback response using actual available options
+            fallback_engine = list(engines.keys())[0] if engines else None
+            fallback_drivetrain = list(drivetrains.keys())[0] if drivetrains else None
+            fallback_color = list(exterior_colors.keys())[0] if exterior_colors else None
+            fallback_interior = list(interior_options.keys())[0] if interior_options else None
+            
+            suggestion_data = {
+                "recommended_config": {
+                    "engine": fallback_engine,
+                    "drivetrain": fallback_drivetrain,
+                    "exterior_color": fallback_color,
+                    "interior": fallback_interior,
+                    "packages": [],
+                    "individual_options": []
+                },
+                "reasoning": {
+                    "engine": f"Default engine option for {model_name}",
+                    "drivetrain": f"Standard drivetrain configuration",
+                    "color": f"Popular color choice for {model_name}",
+                    "interior": f"Standard interior option",
+                    "packages": "No packages selected in fallback mode",
+                    "overall": f"Standard configuration recommended for {model_name}. AI service temporarily unavailable."
+                },
+                "price_estimate": {
+                    "base_price": base_price,
+                    "estimated_total": base_price + 3000
+                },
+                "type": "fallback_response"
+            }
+            
+            return jsonify({
+                'suggestion': suggestion_data,
+                'model': model_name,
+                'preferences': user_preferences,
+                'preference_analysis': preference_analysis,
+                'model_data': model_data,
+                'warning': 'AI service temporarily unavailable. Showing default configuration.'
+            })
+        
+        # Parse the JSON response
+        try:
+            # Clean the response text
+            clean_text = response.text.strip()
+            # Remove markdown code blocks if present
+            clean_text = clean_text.replace('```json', '').replace('```', '').strip()
+            # Find JSON object bounds
+            start_idx = clean_text.find('{')
+            end_idx = clean_text.rfind('}') + 1
+            
+            if start_idx >= 0 and end_idx > start_idx:
+                json_text = clean_text[start_idx:end_idx]
+                suggestion_data = json.loads(json_text)
+            else:
+                raise json.JSONDecodeError("No valid JSON found", clean_text, 0)
+                
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse JSON response: {e}")
+            logger.error(f"Raw response: {response.text}")
+            # Fallback to text response
             suggestion_data = {
                 "recommendation": response.text,
-                "type": "text_response"
+                "type": "text_response",
+                "reasoning": "Could not parse structured response"
             }
         
         return jsonify({
@@ -357,7 +493,12 @@ def gemini_suggest():
         
     except Exception as e:
         logger.error(f"Error with Gemini suggestion: {e}")
-        return jsonify({'error': 'Failed to generate AI suggestion'}), 500
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return jsonify({
+            'error': 'Failed to generate AI suggestion',
+            'details': str(e)
+        }), 500
 
 @app.route('/api/validate-configuration', methods=['POST'])
 def validate_configuration():

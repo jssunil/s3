@@ -22,22 +22,22 @@ class BMWDataScraper:
                 "SUVs": {
                     "models": ["X1", "X2", "X3", "X4", "X5", "X6", "X7", "iX", "XM"],
                     "description": "BMW Sports Activity Vehicles",
-                    "image": "/static/images/bmw-suv.jpg"
+                    "image": "/static/images/bmw-suvs.jpg"
                 },
                 "Sedans": {
                     "models": ["2 Series Gran Coupe", "3 Series", "4 Series Gran Coupe", "5 Series", "7 Series", "8 Series Gran Coupe", "i4", "i5", "i7"],
                     "description": "BMW Sedans & Gran Coupes",
-                    "image": "/static/images/bmw-sedan.jpg"
+                    "image": "/static/images/bmw-sedans.jpg"
                 },
                 "Coupes": {
                     "models": ["2 Series", "4 Series", "8 Series", "M2", "M4"],
                     "description": "BMW Coupes",
-                    "image": "/static/images/bmw-coupe.jpg"
+                    "image": "/static/images/bmw-coupes.jpg"
                 },
                 "Convertibles": {
                     "models": ["4 Series", "8 Series", "Z4", "M4", "M8"],
                     "description": "BMW Convertibles",
-                    "image": "/static/images/bmw-convertible.jpg"
+                    "image": "/static/images/bmw-convertibles.jpg"
                 },
                 "Electric": {
                     "models": ["iX", "i4", "i5", "i7"],
@@ -47,7 +47,7 @@ class BMWDataScraper:
                 "M Models": {
                     "models": ["M2", "M3", "M4", "M5", "M8", "X4 M", "X5 M", "X6 M", "XM"],
                     "description": "BMW M Performance Models",
-                    "image": "/static/images/bmw-m.jpg"
+                    "image": "/static/images/bmw-m-models.jpg"
                 }
             }
             

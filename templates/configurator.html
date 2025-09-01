@@ -415,12 +415,23 @@ function getAISuggestion() {
 
 // Display enhanced AI suggestion
 function displayAISuggestion(suggestion, preferenceAnalysis, modelData) {
-    // Store the suggestion data globally for the apply function
-    window.currentAISuggestion = suggestion;
-    
-    let content = '';
-    
-    if (suggestion.type === 'text_response') {
+    try {
+        // Store the suggestion data globally for the apply function
+        window.currentAISuggestion = suggestion;
+        
+        let content = '';
+        
+        // Handle null or undefined suggestion
+        if (!suggestion) {
+            content = `<div class="alert alert-warning">
+                <h6><i class="fas fa-exclamation-triangle"></i> No Suggestion Available</h6>
+                <p>The AI was unable to generate a suggestion. Please try again with different preferences.</p>
+            </div>`;
+            document.getElementById('aiSuggestionsContent').innerHTML = content;
+            return;
+        }
+        
+        if (suggestion.type === 'text_response') {
         // Fallback for text response
         content = `<div class="alert alert-info">
             <h6><i class="fas fa-robot"></i> AI Recommendation</h6>
@@ -437,9 +448,9 @@ function displayAISuggestion(suggestion, preferenceAnalysis, modelData) {
                     </div>
                     <div class="card-body">
                         <div class="row">
-                            ${Object.entries(preferenceAnalysis).map(([key, value]) => 
+                            ${Object.entries(preferenceAnalysis || {}).map(([key, value]) => 
                                 value ? `<div class="col-md-4">
-                                    <span class="badge bg-primary">${key.replace('_', ' ')}</span>
+                                    <span class="badge bg-primary">${(key || '').replace('_', ' ')}</span>
                                 </div>` : ''
                             ).join('')}
                         </div>
@@ -453,10 +464,10 @@ function displayAISuggestion(suggestion, preferenceAnalysis, modelData) {
                     </div>
                     <div class="card-body">
                         ${suggestion.recommended_config ? 
-                            Object.entries(suggestion.recommended_config).map(([key, value]) => `
+                            Object.entries(suggestion.recommended_config || {}).map(([key, value]) => `
                                 <div class="mb-2">
-                                    <strong>${key.replace('_', ' ').toUpperCase()}:</strong> 
-                                    ${Array.isArray(value) ? value.join(', ') : value}
+                                    <strong>${(key || '').replace('_', ' ').toUpperCase()}:</strong> 
+                                    ${Array.isArray(value) ? value.join(', ') : (value || 'Not specified')}
                                 </div>
                             `).join('') : 
                             '<p>Configuration details not available in structured format.</p>'
@@ -465,9 +476,9 @@ function displayAISuggestion(suggestion, preferenceAnalysis, modelData) {
                         ${suggestion.price_estimate ? `
                             <div class="mt-3 p-3 bg-light rounded">
                                 <h6>Price Estimate</h6>
-                                <div>Base Price: $${suggestion.price_estimate.base_price.toLocaleString()}</div>
-                                <div>Estimated Options: $${suggestion.price_estimate.estimated_options.toLocaleString()}</div>
-                                <div><strong>Total: $${suggestion.price_estimate.estimated_total.toLocaleString()}</strong></div>
+                                <div>Base Price: $${(suggestion.price_estimate.base_price || 0).toLocaleString()}</div>
+                                <div>Estimated Options: $${(suggestion.price_estimate.estimated_options || 0).toLocaleString()}</div>
+                                <div><strong>Total: $${(suggestion.price_estimate.estimated_total || 0).toLocaleString()}</strong></div>
                             </div>
                         ` : ''}
                         
@@ -490,9 +501,9 @@ function displayAISuggestion(suggestion, preferenceAnalysis, modelData) {
                             <h6 class="mb-0"><i class="fas fa-lightbulb"></i> Why We Recommend This</h6>
                         </div>
                         <div class="card-body">
-                            ${Object.entries(suggestion.reasoning).map(([key, value]) => `
+                            ${Object.entries(suggestion.reasoning || {}).map(([key, value]) => `
                                 <div class="mb-2">
-                                    <strong>${key.replace('_', ' ').toUpperCase()}:</strong> ${value}
+                                    <strong>${(key || '').replace('_', ' ').toUpperCase()}:</strong> ${value || 'No explanation provided'}
                                 </div>
                             `).join('')}
                         </div>
@@ -506,9 +517,9 @@ function displayAISuggestion(suggestion, preferenceAnalysis, modelData) {
                             <h6 class="mb-0"><i class="fas fa-exchange-alt"></i> Alternative Options</h6>
                         </div>
                         <div class="card-body">
-                            ${Object.entries(suggestion.alternatives).map(([key, value]) => `
+                            ${Object.entries(suggestion.alternatives || {}).map(([key, value]) => `
                                 <div class="mb-2">
-                                    <strong>${key.replace('_', ' ').toUpperCase()}:</strong> ${value}
+                                    <strong>${(key || '').replace('_', ' ').toUpperCase()}:</strong> ${value || 'No alternative provided'}
                                 </div>
                             `).join('')}
                         </div>
@@ -529,6 +540,16 @@ function displayAISuggestion(suggestion, preferenceAnalysis, modelData) {
     }
     
     document.getElementById('aiSuggestionsContent').innerHTML = content;
+    } catch (error) {
+        console.error('Error displaying AI suggestion:', error);
+        document.getElementById('aiSuggestionsContent').innerHTML = `
+            <div class="alert alert-danger">
+                <h6><i class="fas fa-exclamation-circle"></i> Error Displaying Suggestion</h6>
+                <p>There was an error displaying the AI suggestion. Please try again.</p>
+                <small class="text-muted">Error details: ${error.message}</small>
+            </div>
+        `;
+    }
 }
 
 // Apply AI recommendation to the form
@@ -574,7 +595,24 @@ function applyAIRecommendation() {
     
     // Apply exterior color
     if (config.exterior_color) {
-        const colorInput = document.querySelector(`input[name="exterior_color"][value="${config.exterior_color}"]`);
+        // Try exact match first
+        let colorInput = document.querySelector(`input[name="exterior_color"][value="${config.exterior_color}"]`);
+        
+        // If exact match fails, try partial matching by label text
+        if (!colorInput) {
+            const colorInputs = document.querySelectorAll('input[name="exterior_color"]');
+            console.log(`Looking for color: "${config.exterior_color}"`);
+            for (const input of colorInputs) {
+                const label = input.nextElementSibling;
+                console.log(`Checking label: "${label?.textContent}" with value: "${input.value}"`);
+                if (label && label.textContent.toLowerCase().includes(config.exterior_color.toLowerCase())) {
+                    colorInput = input;
+                    console.log(`Found partial match for color: ${config.exterior_color}`);
+                    break;
+                }
+            }
+        }
+        
         if (colorInput) {
             colorInput.checked = true;
             appliedOptions.push(`Color: ${config.exterior_color}`);
@@ -585,7 +623,24 @@ function applyAIRecommendation() {
     
     // Apply interior selection
     if (config.interior) {
-        const interiorInput = document.querySelector(`input[name="upholstery"][value="${config.interior}"]`);
+        // Try exact match first
+        let interiorInput = document.querySelector(`input[name="upholstery"][value="${config.interior}"]`);
+        
+        // If exact match fails, try partial matching by label text
+        if (!interiorInput) {
+            const interiorInputs = document.querySelectorAll('input[name="upholstery"]');
+            console.log(`Looking for interior: "${config.interior}"`);
+            for (const input of interiorInputs) {
+                const label = input.nextElementSibling;
+                console.log(`Checking interior label: "${label?.textContent}" with value: "${input.value}"`);
+                if (label && label.textContent.toLowerCase().includes(config.interior.toLowerCase())) {
+                    interiorInput = input;
+                    console.log(`Found partial match for interior: ${config.interior}`);
+                    break;
+                }
+            }
+        }
+        
         if (interiorInput) {
             interiorInput.checked = true;
             appliedOptions.push(`Interior: ${config.interior}`);
@@ -609,13 +664,30 @@ function applyAIRecommendation() {
     
     // Apply individual options
     if (config.individual_options && Array.isArray(config.individual_options)) {
-        config.individual_options.forEach(optionCode => {
-            const optionInput = document.querySelector(`input[name="individual_option"][value="${optionCode}"]`);
+        config.individual_options.forEach(optionName => {
+            // Try exact match first
+            let optionInput = document.querySelector(`input[name="individual_option"][value="${optionName}"]`);
+            
+            // If exact match fails, try partial matching by label text
+            if (!optionInput) {
+                const optionInputs = document.querySelectorAll('input[name="individual_option"]');
+                console.log(`Looking for option: "${optionName}"`);
+                for (const input of optionInputs) {
+                    const label = input.nextElementSibling;
+                    console.log(`Checking option label: "${label?.textContent}" with value: "${input.value}"`);
+                    if (label && label.textContent.toLowerCase().includes(optionName.toLowerCase())) {
+                        optionInput = input;
+                        console.log(`Found partial match for option: ${optionName}`);
+                        break;
+                    }
+                }
+            }
+            
             if (optionInput) {
                 optionInput.checked = true;
-                appliedOptions.push(`Option: ${optionCode}`);
+                appliedOptions.push(`Option: ${optionName}`);
             } else {
-                failedOptions.push(`Option: ${optionCode}`);
+                failedOptions.push(`Option: ${optionName}`);
             }
         });
     }
